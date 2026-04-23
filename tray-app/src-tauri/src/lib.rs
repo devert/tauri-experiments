@@ -8,6 +8,14 @@ use tauri::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        // When the user closes the window, hide it instead of quitting so the
+        // app remains accessible via the tray icon.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+        })
         .setup(|app| {
             // On macOS, hide the dock icon so only the tray icon is visible.
             #[cfg(target_os = "macos")]
