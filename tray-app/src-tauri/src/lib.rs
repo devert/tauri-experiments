@@ -80,6 +80,7 @@ pub fn run() {
 
             TrayIconBuilder::new()
                 .icon(tauri::include_image!("icons/tray-icon.png"))
+                .tooltip("Tray App")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
