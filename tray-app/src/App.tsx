@@ -8,6 +8,7 @@ function App() {
   const [username, setUsername] = useState("");
   const [theme, setTheme] = useState("light");
   const [settingsMsg, setSettingsMsg] = useState("");
+  const [processMsg, setProcessMsg] = useState("");
 
   useEffect(() => {
     const handler = () => {
@@ -41,6 +42,33 @@ function App() {
       setSettingsMsg("Settings saved.");
     } catch (e) {
       setSettingsMsg(`Error saving: ${e}`);
+    }
+  }
+
+  async function spawnProcess() {
+    try {
+      const msg = await invoke<string>("spawn_process");
+      setProcessMsg(msg);
+    } catch (e) {
+      setProcessMsg(`Error: ${e}`);
+    }
+  }
+
+  async function checkStatus() {
+    try {
+      const msg = await invoke<string>("process_status");
+      setProcessMsg(msg);
+    } catch (e) {
+      setProcessMsg(`Error: ${e}`);
+    }
+  }
+
+  async function killProcess() {
+    try {
+      const msg = await invoke<string>("kill_process");
+      setProcessMsg(msg);
+    } catch (e) {
+      setProcessMsg(`Error: ${e}`);
     }
   }
 
@@ -103,6 +131,15 @@ function App() {
       </div>
 
       <p>{settingsMsg}</p>
+
+      <hr />
+      <h2>Process Manager</h2>
+      <div className="row">
+        <button onClick={spawnProcess}>Spawn ping</button>
+        <button onClick={checkStatus}>Check Status</button>
+        <button onClick={killProcess}>Kill</button>
+      </div>
+      <p>{processMsg}</p>
     </main>
   );
 }
