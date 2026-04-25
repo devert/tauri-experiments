@@ -121,26 +121,11 @@ pub fn run() {
             kill_process,
         ])
         .on_window_event(|window, event| {
-            match event {
-                // Hide the window instead of quitting so the app remains
-                // accessible via the tray icon.
-                tauri::WindowEvent::CloseRequested { api, .. } => {
-                    window.hide().unwrap();
-                    api.prevent_close();
-                }
-                // Kill any spawned child process when the app shuts down.
-                // This covers exit paths beyond the tray menu's "Quit" button
-                // (e.g. Cmd+Q, force quit, SIGTERM).
-                tauri::WindowEvent::Destroyed => {
-                    let state = window.state::<Mutex<ProcessState>>();
-                    if let Ok(mut guard) = state.lock() {
-                        if let Some(mut child) = guard.child.take() {
-                            let _ = child.kill();
-                            let _ = child.wait();
-                        }
-                    };
-                }
-                _ => {}
+            // Hide the window instead of quitting so the app remains
+            // accessible via the tray icon.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                window.hide().unwrap();
+                api.prevent_close();
             }
         })
         .setup(|app| {
@@ -163,18 +148,7 @@ pub fn run() {
                             window.set_focus().unwrap();
                         }
                     }
-                    // Kill any spawned child process before exiting.
-                    // The Destroyed window event also handles this for other
-                    // exit paths, but the tray quit fires first and avoids
-                    // relying on window teardown order.
                     "quit" => {
-                        let state = app.state::<Mutex<ProcessState>>();
-                        if let Ok(mut guard) = state.lock() {
-                            if let Some(mut child) = guard.child.take() {
-                                let _ = child.kill();
-                                let _ = child.wait();
-                            }
-                        }
                         app.exit(0);
                     }
                     _ => {}
@@ -183,6 +157,20 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // Kill any spawned child process when the app exits. This fires
+            // on every exit path (tray Quit, Cmd+Q, SIGTERM), so it's the
+            // single reliable cleanup point.
+            if let tauri::RunEvent::Exit = event {
+                let state = app_handle.state::<Mutex<ProcessState>>();
+                if let Ok(mut guard) = state.lock() {
+                    if let Some(mut child) = guard.child.take() {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                    }
+                };
+            }
+        });
 }
